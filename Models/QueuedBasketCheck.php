@@ -34,7 +34,6 @@ class QueuedBasketCheck {
     /**
      * @var DateTime
      * @ORM\Column(name="time", type="datetime", nullable=true)
-     * @ORM\Version
      */
     private $time;
 
@@ -84,10 +83,10 @@ class QueuedBasketCheck {
      * @return DateTime
      */
     public function getTime() {
-        return $this->time;
+        return DateTime::createFromFormat('Y-m-d H:i:s', $this->time);
     }
 
-    public function setTime($time) {
-        $this->time = $time;
+    public function setTime(DateTime $time) {
+        $this->time = $time->format('Y-m-d H:i:s');
     }
 }

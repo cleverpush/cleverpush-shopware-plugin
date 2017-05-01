@@ -133,7 +133,8 @@ class CleverPush extends Plugin
             $this->getPath() . '/Views'
         );
 
-        $view->assign('cleverPushConfig', json_encode($this->container->get('shopware.plugin.config_reader')->getByPluginName($this->getName())));
+        $config = $this->container->get('shopware.plugin.config_reader')->getByPluginName($this->getName());
+        $view->assign('cleverPushConfig', json_encode(['channelId' => $config['channelId']]));
     }
 
     public function checkBasketCron(\Shopware_Components_Cron_CronJob $jobArgs)
