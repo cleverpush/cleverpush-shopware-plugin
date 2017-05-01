@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Shopware\Components\Plugin;
 use Shopware\Components\Plugin\Context\InstallContext;
 use Shopware\Components\Plugin\Context\UninstallContext;
+use CleverPush\Models\QueuedBasketCheck;
 
 class CleverPush extends Plugin
 {
@@ -24,6 +25,66 @@ class CleverPush extends Plugin
         ];
     }
 
+    public function install(InstallContext $context) {
+        $this->createSchema();
+        $this->createCron();
+
+        parent::install($context);
+    }
+
+    public function uninstall(UninstallContext $context) {
+        $this->removeSchema();
+        $this->removeCron();
+
+        parent::uninstall($context);
+    }
+
+    private function createSchema()
+    {
+        $tool = new SchemaTool($this->container->get('models'));
+        $classes = [
+            $this->container->get('models')->getClassMetadata(QueuedBasketCheck::class)
+        ];
+        $tool->createSchema($classes);
+    }
+
+    private function removeSchema()
+    {
+        $tool = new SchemaTool($this->container->get('models'));
+        $classes = [
+            $this->container->get('models')->getClassMetadata(QueuedBasketCheck::class)
+        ];
+        $tool->dropSchema($classes);
+    }
+
+    public function createCron()
+    {
+        $connection = $this->container->get('dbal_connection');
+        $connection->insert(
+            's_crontab',
+            [
+                'name'             => 'CleverPushCheckBasket',
+                'action'           => 'Shopware_CronJob_CleverPushCheckBasket',
+                'next'             => new \DateTime(),
+                'start'            => null,
+                'end'              => new \DateTime(),
+                '`interval`'       => '60',
+                'active'           => 1,
+                'pluginID'         => $this->container->get('shopware.plugin_manager')->getPluginByName($this->getName())->getId()
+            ],
+            [
+                'next' => 'datetime',
+                'end' => 'datetime'
+            ]
+        );
+    }
+    public function removeCron()
+    {
+        $this->container->get('dbal_connection')->executeQuery('DELETE FROM s_crontab WHERE `action` = ?', [
+            'Shopware_CronJob_CleverPushCheckBasket'
+        ]);
+    }
+
     public function registerController(\Enlight_Event_EventArgs $args)
     {
         return $this->getPath() . '/Controllers/Frontend/Cleverpush.php';
@@ -36,35 +97,30 @@ class CleverPush extends Plugin
         $subscriptionId = Shopware()->Session()->cleverPushSubscriptionId;
         if (!empty($subscriptionId))
         {
-            // insert cron
-            $notificationMinutes = $this->container->get('shopware.plugin.config_reader')->getByPluginName($this->getName())->notificationMinutes;
+            $config = $this->container->get('shopware.plugin.config_reader')->getByPluginName($this->getName());
+            $notificationMinutes = $config['notificationMinutes'];
             if (empty($notificationMinutes)) {
                 $notificationMinutes = 30;
             } else {
                 $notificationMinutes = intval($notificationMinutes);
             }
 
-            $cronTime = new \DateTime();
-            $cronTime->modify('+' . $notificationMinutes . ' minutes');
-            $connection = $this->container->get('dbal_connection');
-            $connection->insert(
-                's_crontab',
-                [
-                    'name'             => 'CleverPushCheckBasket',
-                    'action'           => 'Shopware_CronJob_CleverPushCheckBasket',
-                    'next'             => $cronTime,
-                    'start'            => null,
-                    '`interval`'       => '0',
-                    'active'           => 1,
-                    'end'              => $cronTime,
-                    'pluginID'         => $this->container->get('shopware.plugin_manager')->getPluginByName('CleverPush')->getId(),
-                    'data'             => serialize(array('subscriptionId' => $subscriptionId, 'basketId' => $basketId))
-                ],
-                [
-                    'next' => 'datetime',
-                    'end'  => 'datetime',
-                ]
-            );
+            $time = new \DateTime();
+            $time->modify('+' . $notificationMinutes . ' minutes');
+
+            $em = $this->container->get('models');
+            $repository = $em->getRepository(QueuedBasketCheck::class);
+
+            // remove existent checks
+            $queuedBasketCheck = $repository->findOneBy(['subscriptionId' => $subscriptionId]);
+            if ($queuedBasketCheck) {
+                $em->remove($queuedBasketCheck);
+                $em->flush();
+            }
+
+            $queuedBasketCheck = new QueuedBasketCheck($basketId, $subscriptionId, $time);
+            $em->persist($queuedBasketCheck);
+            $em->flush($queuedBasketCheck);
         }
     }
 
@@ -82,65 +138,97 @@ class CleverPush extends Plugin
 
     public function checkBasketCron(\Shopware_Components_Cron_CronJob $jobArgs)
     {
-        $job = $jobArgs->getJob();
-        $data = $job->getData();
-        if (empty($data)) {
-            return array('error' => 'Data empty');
-        }
+        $em = $this->container->get('models');
+        $repository = $em->getRepository(QueuedBasketCheck::class);
 
-        /*
-        $this->container->get('dbal_connection')->executeQuery('DELETE FROM s_crontab WHERE `id` = ?', [
-            $job->getId()
-        ]);
-        */
+        $checks = $repository->findAll();
 
-        if (empty($data['basketId']) || empty($data['subscriptionId'])) {
-            return array('error' => 'basketId or subscriptionId empty');
-        }
+        foreach ($checks as $check) {
+            // skip if time has not been reached yet
+            if ($check->getTime() > new \DateTime()) {
+                continue;
+            }
 
-        $basketId = $data['subscriptionId'];
-        $subscriptionId = $data['subscriptionId'];
+            $basketId = $check->getBasketId();
+            $subscriptionId = $check->getSubscriptionId();
 
-        $basket = $this->getModelManager()->getRepository(\Shopware\Models\Order\Basket::class)->find($basketId);
-        if (!$basket) {
-            return array('error' => 'Basket not found');
-        }
+            if (empty($basketId) || empty($subscriptionId)) {
+                echo 'basketId or subscriptionId empty';
+                return true;
+            }
 
-        $article = $this->getModelManager()->getRepository(\Shopware\Models\Article\Article::class)->find($basket->getArticleId());
-        if (!$article) {
-            return array('error' => 'Article not found');
-        }
+            $basket = $em->getRepository(\Shopware\Models\Order\Basket::class)->find($basketId);
+            if (!$basket) {
+                echo 'Basket not found';
+                return true;
+            }
 
-        $image = $article->getImages()->first();
-        $iconUrl = null;
-        if ($image) {
-            $iconUrl = Shopware()->Shop()->getBaseUrl() . '/' . $image->getMedia();
-        }
+            $article = $em->getRepository(\Shopware\Models\Article\Article::class)->find($basket->getArticleId());
+            if (!$article) {
+                echo 'Article not found';
+                return true;
+            }
 
-        $config = $this->container->get('shopware.plugin.config_reader')->getByPluginName($this->getName());
-        if (empty($config->channelId) || empty($config->privateApiKey)) {
-            return array('error' => 'channelId or privateApiKey empty');
-        }
+            $shopConfig = $this->container->get('config');
+            $shopHost = $shopConfig->get('host');
+            $shopSecure = false;
+            if (empty($shopHost)) {
+                $repository = $em->getRepository('Shopware\Models\Shop\Shop');
+                $shop = $repository->getActiveById(1);
+                if ($shop) {
+                    $shopHost = $shop->getHost();
+                    $shopSecure = $shop->getSecure();
+                }
+            }
 
-        $title = $basket->getArticleName();
-        $emoji = json_decode('"\ud83d\uded2"');
-        $notificationText = $config->notificationText;
-        if (empty($notificationText)) {
-            $notificationText = 'Wir haben noch etwas in deinem Warenkorb gefunden.';
-        }
-        $body = $emoji . ' ' . $notificationText;
-        $url = Shopware()->Shop()->getBaseUrl() . '/checkout/cart';
+            $shopUrl = 'http' . ($shopSecure ? 's' : '') . '://' . $shopHost;
 
-        /*
-        $cart = unserialize($session['cart']);
-        if (count($cart) > 1) {
-            $title = get_bloginfo('name');
+            $image = $article->getImages()->first();
             $iconUrl = null;
-        }
-        */
+            if ($image) {
+                $media = $image->getMedia();
+                if ($media) {
+                    $iconUrl = $shopUrl . '/' . $media->getPath();
+                }
+            }
 
-        $api = new \CleverPush_Api($config->channelId, $config->privateApiKey);
-        return $api->sendNotification($title, $body, $url, $iconUrl, $subscriptionId);
+            $config = $this->container->get('shopware.plugin.config_reader')->getByPluginName($this->getName());
+            if (empty($config['channelId']) || empty($config['privateApiKey'])) {
+                echo 'channelId or privateApiKey empty';
+                return true;
+            }
+
+            $title = $basket->getArticleName();
+            $emoji = json_decode('"\ud83d\uded2"');
+            $notificationText = $config['notificationText'];
+            if (empty($notificationText)) {
+                $notificationText = 'Wir haben noch etwas in deinem Warenkorb gefunden.';
+            }
+            $body = $emoji . ' ' . $notificationText;
+            $url = $shopUrl . '/checkout/cart';
+
+            /*
+            // not working yet, dont know how to find multiple articles in basket
+            if (count($basket->articleID) > 1) {
+                $title = $this->container->get('config')->get('shopName');
+                $iconUrl = null;
+            }
+            */
+
+            $api = new CleverPushApi($config['channelId'], $config['privateApiKey']);
+
+            try {
+                $response = $api->sendNotification($title, $body, $url, $iconUrl, $subscriptionId);
+                echo $response;
+            } catch (\Exception $ex) {
+                echo $ex->getMessage();
+            }
+
+            $em->remove($check);
+            $em->flush();
+        }
+
+        return true;
     }
 
     public function addJsFiles(\Enlight_Event_EventArgs $args)

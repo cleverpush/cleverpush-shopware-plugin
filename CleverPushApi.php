@@ -1,8 +1,10 @@
 <?php
 
+namespace CleverPush;
+
 const CLEVERPUSH_API_ENDPOINT = 'https://api.cleverpush.com';
 
-class CleverPush_Api
+class CleverPushApi
 {
     private $channelId;
     private $apiKeyPrivate;
@@ -36,10 +38,10 @@ class CleverPush_Api
             $error_message = $response->get_error_message();
         }
 
-        var_dump($response);
+        // var_dump($response);
 
         if (!empty($error_message)) {
-            throw new Exception($error_message);
+            throw new \Exception($error_message);
         }
 
         return $response;
