@@ -146,26 +146,33 @@ class CleverPush extends Plugin
 
         foreach ($checks as $check) {
             // skip if time has not been reached yet
-            if ($check->getTime() > new \DateTime()) {
+            if ($check->getTime() > new \DateTime())
+            {
                 continue;
             }
 
             $basketId = $check->getBasketId();
             $subscriptionId = $check->getSubscriptionId();
 
-            if (empty($basketId) || empty($subscriptionId)) {
+            $em->remove($check);
+            $em->flush();
+
+            if (empty($basketId) || empty($subscriptionId))
+            {
                 echo 'basketId or subscriptionId empty';
                 return true;
             }
 
             $basket = $em->getRepository(\Shopware\Models\Order\Basket::class)->find($basketId);
-            if (!$basket) {
+            if (!$basket)
+            {
                 echo 'Basket not found';
                 return true;
             }
 
             $article = $em->getRepository(\Shopware\Models\Article\Article::class)->find($basket->getArticleId());
-            if (!$article) {
+            if (!$article)
+            {
                 echo 'Article not found';
                 return true;
             }
@@ -173,10 +180,12 @@ class CleverPush extends Plugin
             $shopConfig = $this->container->get('config');
             $shopHost = $shopConfig->get('host');
             $shopSecure = false;
-            if (empty($shopHost)) {
+            if (empty($shopHost))
+            {
                 $repository = $em->getRepository('Shopware\Models\Shop\Shop');
                 $shop = $repository->getActiveById(1);
-                if ($shop) {
+                if ($shop)
+                {
                     $shopHost = $shop->getHost();
                     $shopSecure = $shop->getSecure();
                 }
@@ -186,15 +195,18 @@ class CleverPush extends Plugin
 
             $image = $article->getImages()->first();
             $iconUrl = null;
-            if ($image) {
+            if ($image)
+            {
                 $media = $image->getMedia();
-                if ($media) {
+                if ($media)
+                {
                     $iconUrl = $shopUrl . '/' . $media->getPath();
                 }
             }
 
             $config = $this->container->get('shopware.plugin.config_reader')->getByPluginName($this->getName());
-            if (empty($config['channelId']) || empty($config['privateApiKey'])) {
+            if (empty($config['channelId']) || empty($config['privateApiKey']))
+            {
                 echo 'channelId or privateApiKey empty';
                 return true;
             }
@@ -202,7 +214,8 @@ class CleverPush extends Plugin
             $title = $basket->getArticleName();
             $emoji = json_decode('"\ud83d\uded2"');
             $notificationText = $config['notificationText'];
-            if (empty($notificationText)) {
+            if (empty($notificationText))
+            {
                 $notificationText = 'Wir haben noch etwas in deinem Warenkorb gefunden.';
             }
             $body = $emoji . ' ' . $notificationText;
@@ -218,15 +231,15 @@ class CleverPush extends Plugin
 
             $api = new CleverPushApi($config['channelId'], $config['privateApiKey']);
 
-            try {
+            try
+            {
                 $response = $api->sendNotification($title, $body, $url, $iconUrl, $subscriptionId);
                 echo $response;
-            } catch (\Exception $ex) {
+            }
+            catch (\Exception $ex)
+            {
                 echo $ex->getMessage();
             }
-
-            $em->remove($check);
-            $em->flush();
         }
 
         return true;
