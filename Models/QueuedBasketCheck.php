@@ -83,7 +83,7 @@ class QueuedBasketCheck {
      * @return DateTime
      */
     public function getTime() {
-        return DateTime::createFromFormat('Y-m-d H:i:s', $this->time);
+        return $this->time;
     }
 
     public function setTime(DateTime $time) {
