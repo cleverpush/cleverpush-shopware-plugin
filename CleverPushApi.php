@@ -1,6 +1,6 @@
 <?php
 
-namespace CleverPush;
+namespace ClvrCleverPush;
 
 const CLEVERPUSH_API_ENDPOINT = 'https://api.cleverpush.com';
 

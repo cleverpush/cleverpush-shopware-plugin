@@ -1,6 +1,6 @@
 <?php
 
-namespace CleverPush\Models;
+namespace ClvrCleverPush\Models;
 
 use Doctrine\ORM\Mapping as ORM;
 use DateTime;

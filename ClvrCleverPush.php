@@ -1,6 +1,6 @@
 <?php
 
-namespace CleverPush;
+namespace ClvrCleverPush;
 
 use Doctrine\ORM\Tools\SchemaTool;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -9,7 +9,7 @@ use Shopware\Components\Plugin\Context\InstallContext;
 use Shopware\Components\Plugin\Context\UninstallContext;
 use CleverPush\Models\QueuedBasketCheck;
 
-class CleverPush extends Plugin
+class ClvrCleverPush extends Plugin
 {
     /**
      * @inheritdoc
