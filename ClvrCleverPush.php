@@ -94,33 +94,35 @@ class ClvrCleverPush extends Plugin
     {
         $basketId = $args->getReturn();
 
-        $subscriptionId = Shopware()->Session()->cleverPushSubscriptionId;
-        if (!empty($subscriptionId))
-        {
-            $config = $this->container->get('shopware.plugin.config_reader')->getByPluginName($this->getName());
-            $notificationMinutes = $config['notificationMinutes'];
-            if (empty($notificationMinutes)) {
-                $notificationMinutes = 30;
-            } else {
-                $notificationMinutes = intval($notificationMinutes);
+        if (!empty($basketId)) {
+            $subscriptionId = Shopware()->Session()->cleverPushSubscriptionId;
+            if (!empty($subscriptionId))
+            {
+                $config = $this->container->get('shopware.plugin.config_reader')->getByPluginName($this->getName());
+                $notificationMinutes = $config['notificationMinutes'];
+                if (empty($notificationMinutes)) {
+                    $notificationMinutes = 30;
+                } else {
+                    $notificationMinutes = intval($notificationMinutes);
+                }
+
+                $time = new \DateTime();
+                $time->modify('+' . $notificationMinutes . ' minutes');
+
+                $em = $this->container->get('models');
+                $repository = $em->getRepository(QueuedBasketCheck::class);
+
+                // remove existent checks
+                $queuedBasketCheck = $repository->findOneBy(['subscriptionId' => $subscriptionId]);
+                if ($queuedBasketCheck) {
+                    $em->remove($queuedBasketCheck);
+                    $em->flush();
+                }
+
+                $queuedBasketCheck = new QueuedBasketCheck($basketId, $subscriptionId, $time);
+                $em->persist($queuedBasketCheck);
+                $em->flush($queuedBasketCheck);
             }
-
-            $time = new \DateTime();
-            $time->modify('+' . $notificationMinutes . ' minutes');
-
-            $em = $this->container->get('models');
-            $repository = $em->getRepository(QueuedBasketCheck::class);
-
-            // remove existent checks
-            $queuedBasketCheck = $repository->findOneBy(['subscriptionId' => $subscriptionId]);
-            if ($queuedBasketCheck) {
-                $em->remove($queuedBasketCheck);
-                $em->flush();
-            }
-
-            $queuedBasketCheck = new QueuedBasketCheck($basketId, $subscriptionId, $time);
-            $em->persist($queuedBasketCheck);
-            $em->flush($queuedBasketCheck);
         }
     }
 
