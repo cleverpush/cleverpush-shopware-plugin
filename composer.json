@@ -1,0 +1,31 @@
+{
+  "name": "cleverpush/cleverpush-shopware-plugin",
+  "description": "Official CleverPush Shopware extension.",
+  "version": "1.0.0",
+  "type": "shopware-platform-plugin",
+  "license": "MIT",
+  "authors": [
+      {
+          "name": "Shopware"
+      }
+  ],
+  "require": {
+      "shopware/core": "6.4.*"
+  },
+  "extra": {
+      "shopware-plugin-class": "CleverPush\\CleverPushShopware\\CleverPushShopwarePlugin",
+      "label": {
+          "de-DE": "CleverPush",
+          "en-GB": "CleverPush"
+      },
+      "description": {
+          "de-DE": "Offizielles CleverPush Shopware Plugin.",
+          "en-GB": "Official CleverPush Shopware extension."
+      }
+  },
+  "autoload": {
+      "psr-4": {
+          "CleverPush\\CleverPushShopware\\": "src/"
+      }
+  }
+}
