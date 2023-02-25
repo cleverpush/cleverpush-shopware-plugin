@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/platform/trunk/src/Core/System/SystemConfig/Schema/config.xsd">
+    <card>
+        <title>Channel</title>
+        <title lang="de-DE">Kanal</title>
+        <input-field>
+            <name>channelId</name>
+            <label>Channel ID</label>
+            <label lang="de-DE">Kanal ID</label>
+            <helpText>The Channel ID is displayed in the CleverPush channel settings.</helpText>
+            <helpText lang="de-DE">Die Kanal ID, welche in den CleverPush Kanal Einstellungen eingesehen werden kann.</helpText>
+        </input-field>
+    </card>
+</config>

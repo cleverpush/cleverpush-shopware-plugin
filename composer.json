@@ -3,10 +3,10 @@
   "description": "Official CleverPush Shopware extension.",
   "version": "1.0.0",
   "type": "shopware-platform-plugin",
-  "license": "MIT",
+  "license": "proprietary",
   "authors": [
       {
-          "name": "Shopware"
+          "name": "CleverPush GmbH"
       }
   ],
   "require": {
