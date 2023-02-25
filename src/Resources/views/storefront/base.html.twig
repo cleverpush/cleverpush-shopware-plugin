@@ -1,0 +1,9 @@
+{% sw_extends '@Storefront/storefront/base.html.twig' %}
+
+{% block base_main %}
+    {{ parent() }}
+    <script>
+      window.cleverPushConfig = { serviceWorkerFile: '/cleverpush/cleverpush-worker.js' };
+    </script>
+    <script src="https://static.cleverpush.com/channel/loader/{{ config('CleverPushShopwarePlugin.config.channelId') }}.js" async></script>
+{% endblock %}
