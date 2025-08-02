@@ -10,8 +10,8 @@
         }
     ],
     "require": {
-        "shopware/core": "~6.6.0",
-        "shopware/storefront": "~6.6.0"
+        "shopware/core": "^6.6.0",
+        "shopware/storefront": "^6.6.0"
     },
     "require-dev": {
         "ergebnis/composer-normalize": "^2.47"
@@ -40,6 +40,7 @@
             "de-DE": "https://cleverpush.com/de/",
             "en-GB": "https://cleverpush.com/en/"
         },
+        "plugin-icon": "src/Resources/config/plugin.png",
         "shopware-plugin-class": "CleverPush\\CleverPushShopware\\CleverPushShopwarePlugin",
         "supportLink": {
             "de-DE": "https://github.com/cleverpush/cleverpush-shopware-plugin",
