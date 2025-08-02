@@ -1,31 +1,53 @@
 {
-  "name": "cleverpush/cleverpush-shopware-plugin",
-  "description": "Official CleverPush Shopware extension.",
-  "version": "1.0.0",
-  "type": "shopware-platform-plugin",
-  "license": "proprietary",
-  "authors": [
-      {
-          "name": "CleverPush GmbH"
-      }
-  ],
-  "require": {
-      "shopware/core": "6.4.*"
-  },
-  "extra": {
-      "shopware-plugin-class": "CleverPush\\CleverPushShopware\\CleverPushShopwarePlugin",
-      "label": {
-          "de-DE": "CleverPush",
-          "en-GB": "CleverPush"
-      },
-      "description": {
-          "de-DE": "Offizielles CleverPush Shopware Plugin.",
-          "en-GB": "Official CleverPush Shopware extension."
-      }
-  },
-  "autoload": {
-      "psr-4": {
-          "CleverPush\\CleverPushShopware\\": "src/"
-      }
-  }
+    "name": "cleverpush/cleverpush-shopware-plugin",
+    "description": "Official CleverPush Shopware extension.",
+    "license": "proprietary",
+    "type": "shopware-platform-plugin",
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "CleverPush GmbH"
+        }
+    ],
+    "require": {
+        "shopware/core": "~6.6.0",
+        "shopware/storefront": "~6.6.0"
+    },
+    "require-dev": {
+        "ergebnis/composer-normalize": "^2.47"
+    },
+    "autoload": {
+        "psr-4": {
+            "CleverPush\\CleverPushShopware\\": "src/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "ergebnis/composer-normalize": true,
+            "symfony/runtime": true
+        }
+    },
+    "extra": {
+        "description": {
+            "de-DE": "Offizielles CleverPush Shopware Plugin. Erweitert Shopware um eine Integration von CleverPush mithilfe eines Service Workers. Die Channel ID kann im Adminbereich gesetzt werden.",
+            "en-GB": "Official CleverPush Shopware extension. Extends Shopware with an integration of CleverPush via a Service Worker. The Channel ID can be set in the Admin area."
+        },
+        "label": {
+            "de-DE": "CleverPush",
+            "en-GB": "CleverPush"
+        },
+        "manufacturerLink": {
+            "de-DE": "https://cleverpush.com/de/",
+            "en-GB": "https://cleverpush.com/en/"
+        },
+        "shopware-plugin-class": "CleverPush\\CleverPushShopware\\CleverPushShopwarePlugin",
+        "supportLink": {
+            "de-DE": "https://github.com/cleverpush/cleverpush-shopware-plugin",
+            "en-GB": "https://github.com/cleverpush/cleverpush-shopware-plugin"
+        }
+    },
+    "scripts": {
+        "check": "docker pull shopware/shopware-cli:latest && docker run --rm -v $(pwd):/ext shopware/shopware-cli:latest extension validate --full /ext",
+        "format": "docker pull shopware/shopware-cli:latest && docker run --rm -v $(pwd):/ext shopware/shopware-cli:latest extension format /ext"
+    }
 }

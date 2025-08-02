@@ -1,0 +1,41 @@
+name: Lint
+
+on:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+jobs:
+    extension-verifier:
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                version-selection: [ 'lowest', 'highest' ]
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v4
+
+            -   name: Check extension
+                uses: shopware/github-actions/extension-verifier@main
+                with:
+                    action: check
+                    check-against: ${{ matrix.version-selection }}
+    cs:
+        runs-on: ubuntu-latest
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v4
+
+            -   name: Check extension
+                uses: shopware/github-actions/extension-verifier@main
+                with:
+                    action: format
+    zip:
+        needs:
+            - cs
+            - extension-verifier
+        uses: shopware/github-actions/.github/workflows/build-zip.yml@main
+        with:
+            extensionName: CleverPushShopwarePlugin
