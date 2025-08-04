@@ -8,8 +8,8 @@
             <name>channelId</name>
             <label>Channel ID</label>
             <label lang="de-DE">Kanal ID</label>
-            <helpText>The Channel ID is displayed in the CleverPush channel settings.</helpText>
-            <helpText lang="de-DE">Die Kanal ID, welche in den CleverPush Kanal Einstellungen eingesehen werden kann.</helpText>
+            <helpText>The Channel ID is displayed in the CleverPush channel settings. Leave empty deactivate for this sales channel.</helpText>
+            <helpText lang="de-DE">Die Kanal ID, welche in den CleverPush Kanal Einstellungen eingesehen werden kann. Leer lassen deaktiviert diesen Verkaufskanal.</helpText>
         </input-field>
     </card>
 </config>
