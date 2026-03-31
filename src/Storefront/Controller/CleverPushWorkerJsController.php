@@ -3,6 +3,7 @@
 namespace CleverPush\CleverPushShopware\Storefront\Controller;
 
 use Shopware\Core\PlatformRequest;
+use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
 use Shopware\Storefront\Controller\StorefrontController;
 use Shopware\Storefront\Framework\Routing\StorefrontRouteScope;
@@ -20,9 +21,9 @@ class CleverPushWorkerJsController extends StorefrontController
     }
 
     #[Route(path: '/cleverpush-worker.js', name: 'frontend.cleverpush.worker', defaults: ['_httpCache' => true], methods: ['GET'])]
-    public function showCleverPushWorkerJs(): Response
+    public function showCleverPushWorkerJs(SalesChannelContext $salesChannelContext): Response
     {
-        $channelId = trim($this->systemConfigService->getString('CleverPushShopwarePlugin.config.channelId'));
+        $channelId = trim($this->systemConfigService->getString('CleverPushShopwarePlugin.config.channelId', $salesChannelContext->getSalesChannelId()));
 
         $content = 'console.log(\'CleverPush Channel ID is not configured.\');';
         if ($channelId !== '' && $channelId !== '0') {
