@@ -4,6 +4,86 @@
     {{ parent() }}
 
     {% if config('CleverPushShopwarePlugin.config.channelId') is not empty %}
+        {#
+            CP-11185: The CleverPush SDK installs a delegated global click handler
+            that calls preventDefault() and stopImmediatePropagation() on every
+            click it considers "handleable". For Shopware-internal anchor links
+            (e.g. the product review tab via href="#review-tab-..." with
+            data-remote-click="true") this incorrectly cancels the native
+            tab-switch / hash navigation.
+
+            Until the SDK exposes finer-grained shouldHandle() rules, we install
+            our own bubble-phase delegated listener on `document` BEFORE the
+            async CleverPush loader runs. Because click listeners on the same
+            target fire in registration order, ours fires first and uses
+            stopImmediatePropagation() to prevent the SDK's later-registered
+            handler (and any window-level fallback) from seeing the event.
+
+            We do this only for elements that Shopware (or themes built on it)
+            uses for in-page navigation, so legitimate CleverPush tracking on
+            outbound / non-anchor clicks keeps working.
+        #}
+        <script>
+            (function () {
+                if (typeof document === 'undefined' || !document.addEventListener) {
+                    return;
+                }
+
+                /*
+                 * Selectors for elements that Shopware (or themes built on it)
+                 * use for in-page navigation / interactive widgets and that the
+                 * CleverPush SDK must NOT intercept. Notably the product-detail
+                 * review tab link uses href="#review-tab-..." together with
+                 * data-remote-click="true".
+                 */
+                var INTERNAL_NAV_SELECTOR = [
+                    'a[href^="#"]',
+                    '[data-remote-click]',
+                    '[data-bs-toggle]',
+                    '[data-toggle]',
+                    '.product-detail-reviews-link'
+                ].join(', ');
+
+                function isInternalNavigation(target) {
+                    if (!target || typeof target.closest !== 'function') {
+                        return false;
+                    }
+                    try {
+                        return !!target.closest(INTERNAL_NAV_SELECTOR);
+                    } catch (e) {
+                        return false;
+                    }
+                }
+
+                /*
+                 * Register a delegated click listener on `document` BEFORE the
+                 * async CleverPush loader is requested. Listeners on the same
+                 * EventTarget fire in registration order, so this one runs
+                 * before the SDK's later-registered delegated handler. By
+                 * calling stopImmediatePropagation() for Shopware-internal
+                 * anchors, we keep the SDK from invoking its preventDefault()
+                 * / stopImmediatePropagation() on them, which previously
+                 * blocked Shopware's hash-based tab switch (e.g. the review
+                 * tab on the product detail page – CP-11185).
+                 *
+                 * Shopware's own RemoteClickPlugin and Bootstrap toggles
+                 * attach element-level listeners that fire in the target
+                 * phase before this document-level bubble handler, so their
+                 * behavior is preserved.
+                 */
+                document.addEventListener('click', function (event) {
+                    var target = event && event.target;
+                    if (!target || !isInternalNavigation(target)) {
+                        return;
+                    }
+                    if (typeof event.stopImmediatePropagation === 'function') {
+                        event.stopImmediatePropagation();
+                    } else if (typeof event.stopPropagation === 'function') {
+                        event.stopPropagation();
+                    }
+                }, false);
+            })();
+        </script>
         <script src="https://static.cleverpush.com/channel/loader/{{ config('CleverPushShopwarePlugin.config.channelId') }}.js" async></script>
     {% endif %}
 {% endblock %}
