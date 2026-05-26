@@ -19,9 +19,19 @@
             stopImmediatePropagation() to prevent the SDK's later-registered
             handler (and any window-level fallback) from seeing the event.
 
-            We do this only for elements that Shopware (or themes built on it)
-            uses for in-page navigation, so legitimate CleverPush tracking on
-            outbound / non-anchor clicks keeps working.
+            Trade-off: stopImmediatePropagation() also blocks other document-level
+            listeners registered after this script (e.g. analytics tags). The
+            selectors below are therefore kept as narrow as possible — matching
+            only the confirmed-broken Shopware-specific elements — to minimise
+            collateral impact. In particular:
+              • a[href^="#"] alone is intentionally NOT used; it would match every
+                void href="#" JavaScript-action anchor across the page.
+              • Only the compound a[href^="#"][data-remote-click] is used, which
+                is the exact attribute combination Shopware's RemoteClickPlugin
+                places on in-page navigation links such as the review-tab anchor.
+              • [data-bs-toggle] / [data-toggle] are omitted; Bootstrap toggle
+                elements attach element-level listeners (fired before this handler)
+                and were not reported as affected by CP-11185.
         #}
         <script>
             (function () {
@@ -30,17 +40,14 @@
                 }
 
                 /*
-                 * Selectors for elements that Shopware (or themes built on it)
-                 * use for in-page navigation / interactive widgets and that the
-                 * CleverPush SDK must NOT intercept. Notably the product-detail
-                 * review tab link uses href="#review-tab-..." together with
-                 * data-remote-click="true".
+                 * Intentionally narrow: only the compound selector
+                 * a[href^="#"][data-remote-click] is used so that ordinary
+                 * href="#" void anchors and other hash links are NOT affected.
+                 * .product-detail-reviews-link is included as an explicit guard
+                 * for the element confirmed broken in CP-11185.
                  */
                 var INTERNAL_NAV_SELECTOR = [
-                    'a[href^="#"]',
-                    '[data-remote-click]',
-                    '[data-bs-toggle]',
-                    '[data-toggle]',
+                    'a[href^="#"][data-remote-click]',
                     '.product-detail-reviews-link'
                 ].join(', ');
 
