@@ -4,6 +4,50 @@
     {{ parent() }}
 
     {% if config('CleverPushShopwarePlugin.config.channelId') is not empty %}
+        {# CP-11185: Patch Document.prototype.addEventListener before the CleverPush SDK loads.
+           Every click listener registered on `document` is wrapped to skip Shopware-internal
+           hash-navigation anchors, preventing the SDK from calling preventDefault() on them. #}
+        <script>
+            (function () {
+                if (typeof Document === 'undefined' || typeof Document.prototype.addEventListener !== 'function') {
+                    return;
+                }
+
+                var SELECTOR = 'a[href^="#"][data-remote-click], .product-detail-reviews-link';
+
+                function isInternalNav(target) {
+                    if (!target || typeof target.closest !== 'function') { return false; }
+                    try { return !!target.closest(SELECTOR); } catch (e) { return false; }
+                }
+
+                var _origAdd    = Document.prototype.addEventListener;
+                var _origRemove = Document.prototype.removeEventListener;
+                var _wrapMap    = typeof WeakMap === 'function' ? new WeakMap() : null;
+
+                Document.prototype.addEventListener = function (type, listener, options) {
+                    if (type === 'click' && typeof listener === 'function') {
+                        var wrapped = function (event) {
+                            if (event && isInternalNav(event.target)) { return; }
+                            return listener.apply(this, arguments);
+                        };
+                        _wrapMap ? _wrapMap.set(listener, wrapped) : (listener._cpWrap = wrapped);
+                        return _origAdd.call(this, 'click', wrapped, options);
+                    }
+                    return _origAdd.call(this, type, listener, options);
+                };
+
+                Document.prototype.removeEventListener = function (type, listener, options) {
+                    if (type === 'click' && typeof listener === 'function') {
+                        var wrapped = _wrapMap ? _wrapMap.get(listener) : listener._cpWrap;
+                        if (wrapped) {
+                            _wrapMap ? _wrapMap.delete(listener) : delete listener._cpWrap;
+                            return _origRemove.call(this, 'click', wrapped, options);
+                        }
+                    }
+                    return _origRemove.call(this, type, listener, options);
+                };
+            })();
+        </script>
         <script src="https://static.cleverpush.com/channel/loader/{{ config('CleverPushShopwarePlugin.config.channelId') }}.js" async></script>
     {% endif %}
 {% endblock %}
